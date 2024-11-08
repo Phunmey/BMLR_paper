@@ -1,16 +1,13 @@
 """
-Bayesian Multinomial Logistic Regression funtion for the simulated data.
+Bayesian Multinomial Logistic Regression function for the simulated data.
 """
 
 
-import numpy as np
-import matplotlib.pyplot as plt
 import pymc as pm
 import pytensor.tensor as pt
+from matplotlib import pyplot as plt
 
 from time import time
-from imblearn.over_sampling import SMOTE, ADASYN
-from imblearn.under_sampling import TomekLinks
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from bayesian_plotting import *
 
@@ -22,18 +19,8 @@ plt.rcParams["figure.figsize"] = [7, 6]
 plt.rcParams["figure.dpi"] = 100
 
 
-def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, i, class_names, resampling_technique, classes,
-         sample, sce, k_neighbors=None):
-    if resampling_technique == 'SMOTE':
-        oversample = SMOTE(k_neighbors=k_neighbors, random_state=123)
-        xtrain, ytrain = oversample.fit_resample(xtrain.copy(), ytrain.copy())
-    elif resampling_technique == 'ADASYN':
-        oversample = ADASYN(n_neighbors=k_neighbors, sampling_strategy='minority', random_state=123)
-        xtrain, ytrain = oversample.fit_resample(xtrain.copy(), ytrain.copy())
-    elif resampling_technique == 'Tomek':
-        undersample = TomekLinks()
-        xtrain, ytrain = undersample.fit_resample(xtrain.copy(), ytrain.copy())
-
+def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, resampling_technique, classes,
+         sample, sce, i):
     start1 = time()
     coords = {"xvars": use_features, "classes": class_names}
     with pm.Model(coords=coords) as model:
@@ -66,20 +53,21 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, i, class_name
     train_prec = precision_score(ytrain, row_max, average='macro')
     train_rec = recall_score(ytrain, row_max, average='macro')
     train_f1 = f1_score(ytrain, row_max, average='macro')
-    train_conf = (str(confusion_matrix(ytrain, row_max).flatten(order='C')))[1:-1]
+    # train_conf = (str(confusion_matrix(ytrain, row_max).flatten(order='C')))[1:-1]
 
     end1 = time()
     train_time = end1 - start1
 
-    file1.write(f"{classes} \t {sample} \t {sce} \t {resampling_technique} \t BMLR \t {i} \t {train_acc} \t {train_prec} "
-                f"\t {train_rec} \t {train_f1} \t {train_conf} \t {train_time}\n")
+    file1.write(f"{classes}\t{sample}\t{sce}\t{resampling_technique}\tBMLR\t{i}\t{train_acc}\t{train_prec}\t"
+                f"{train_rec}\t{train_f1}\t{train_time}\n")
     file1.flush()
 
     start2 = time()
     with model:
         pm.set_data({"xNormal": xtest.copy()})
-        post_predictive = pm.sample_posterior_predictive(trace, var_names=[f'thetaNormal_{resampling_technique}', 'observed'],
-                                             predictions=True)
+        post_predictive = pm.sample_posterior_predictive(trace,
+                                                         var_names=[f'thetaNormal_{resampling_technique}', 'observed'],
+                                                         predictions=True)
 
     theta_test_pred = post_predictive.predictions[f'thetaNormal_{resampling_technique}'].mean(dim=['chain', 'draw'])
     row_max_test = theta_test_pred.argmax(axis=1)
@@ -88,12 +76,11 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, i, class_name
     test_prec = precision_score(ytest, row_max_test, average='macro')
     test_rec = recall_score(ytest, row_max_test, average='macro')
     test_f1 = f1_score(ytest, row_max_test, average='macro')
-    test_conf = (str(confusion_matrix(ytest, row_max_test).flatten(order='C')))[1:-1]
+    # test_conf = (str(confusion_matrix(ytest, row_max_test).flatten(order='C')))[1:-1]
 
     end2 = time()
     test_time = end2 - start2
 
-    file2.write(f"{classes} \t {sample} \t {sce} \t {resampling_technique} \t BMLR \t {i} \t {test_acc} \t {test_prec} "
-                f"\t {test_rec} \t {test_f1} \t {test_conf} \t {test_time}\n")
+    file2.write(f"{classes}\t{sample}\t{sce}\t{resampling_technique}\tBMLR\t{i}\t{test_acc}\t{test_prec}\t"
+                f"{test_rec}\t{test_f1}\t{test_time}\n")
     file2.flush()
-

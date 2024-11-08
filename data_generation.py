@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import make_classification
 
-np.random.seed(42)
-
 
 def generate_multiclass_data(n_samples, class_ratios, n_classes, n_features=10, n_repeated=0, dis_variable=(1, 100)):
     np.random.seed(42)  # for reproducibility
@@ -61,7 +59,6 @@ class_ratio_scenarios = [
 ]
 
 sample_sizes = [2000, 5000, 10000]  # Define different sample sizes for each scenario
-# feature_counts = [5, 10]  # Define different numbers of features
 
 for scenario in class_ratio_scenarios:
     n_classes = scenario['n_classes']
@@ -74,5 +71,5 @@ for scenario in class_ratio_scenarios:
             print(f"\nScenario {scenario_counter}, Class {n_classes}: Sample Size {n_samples}, Class Ratios {class_ratio}")
             print(np.round(df['Class'].value_counts(normalize=True), 2))
 
-            filename = rf".\simulated_data\sim_class{n_classes}_{n_samples}samples_{scenario_counter}.csv"
+            filename = rf"{n_classes}_{n_samples}samples_{scenario_counter}.csv"
             df.to_csv(filename, index=False)
