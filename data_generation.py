@@ -8,13 +8,9 @@ import pandas as pd
 from sklearn.datasets import make_classification
 
 
-def generate_multiclass_data(n_samples, class_ratios, n_classes, n_features=10, n_repeated=0, dis_variable=(1, 100)):
+def generate_multiclass_data(n_samples, class_ratios, n_classes, n_features=10, n_redundant=0, n_informative=8,
+                             n_repeated=0, dis_variable=(1, 100)):
     np.random.seed(42)  # for reproducibility
-
-    # Ensure n_informative is the same as n_features
-    n_informative = np.ceil(n_features / 2).astype(int)
-    n_redundant = n_features - n_informative - n_repeated
-
     X, y = make_classification(
         n_samples=n_samples,
         n_features=n_features,
@@ -34,7 +30,7 @@ def generate_multiclass_data(n_samples, class_ratios, n_classes, n_features=10, 
     feature_names = [f'Feature_{i}' for i in range(n_features)]
 
     df = pd.DataFrame(X, columns=feature_names)
-    df['Class'] = y
+    df['Target'] = y
 
     return df
 
@@ -42,23 +38,18 @@ def generate_multiclass_data(n_samples, class_ratios, n_classes, n_features=10, 
 # Define the three specific class ratio scenarios
 class_ratio_scenarios = [
     {'n_classes': 3, 'class_ratios': [
-        (0.5, 0.3, 0.2),  # Moderately Imbalanced
-        (0.8, 0.02, 0.18),  # Extremely Imbalanced
-        (0.7, 0.15, 0.15)  # Extremely Imbalanced but Equal Minorities
+        ('Moderate', (0.5, 0.3, 0.2)),
+        ('Extreme', (0.8, 0.02, 0.18)),
+        ('EqualMinorities', (0.7, 0.15, 0.15))
     ]},
     {'n_classes': 5, 'class_ratios': [
-        (0.4, 0.2, 0.15, 0.15, 0.1),   # Moderately Imbalanced
-        (0.6, 0.1, 0.04, 0.2, 0.06),  # Extremely Imbalanced
-        (0.6, 0.1, 0.1, 0.1, 0.1)  # Extremely Imbalanced but Equal Minorities
-    ]},
-    {'n_classes': 10, 'class_ratios': [
-        (0.35, 0.1, 0.1, 0.1, 0.1, 0.08, 0.06, 0.05, 0.04, 0.02),  # Moderately Imbalanced
-        (0.7, 0.05, 0.05, 0.04, 0.04, 0.03, 0.03, 0.02, 0.02, 0.02),  # Extremely Imbalanced
-        (0.55, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05)  # Extremely Imbalanced but Equal Minorities
+        ('Moderate', (0.4, 0.2, 0.15, 0.15, 0.1)),
+        ('Extreme', (0.6, 0.1, 0.04, 0.2, 0.06)),
+        ('EqualMinorities', (0.6, 0.1, 0.1, 0.1, 0.1))
     ]}
 ]
 
-sample_sizes = [2000, 5000, 10000]  # Define different sample sizes for each scenario
+sample_sizes = [100, 200, 500, 1000, 2000, 5000, 10000]  # Define different sample sizes for each scenario
 
 for scenario in class_ratio_scenarios:
     n_classes = scenario['n_classes']

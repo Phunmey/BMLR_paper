@@ -1,6 +1,5 @@
 """
-Bayesian Multinomial Logistic Regression funtion for the student data. I have used {classes}_{sample}_{sce} to occupy
-the space in the result file. It is not exactly necessary.
+Bayesian Multinomial Logistic Regression funtion for the student data.
 """
 
 import pymc as pm
@@ -8,7 +7,7 @@ import pytensor.tensor as pt
 import matplotlib.pyplot as plt
 
 from time import time
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from bayesian_plotting import *
 
 RANDOM_SEED = 8927
@@ -24,10 +23,12 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, 
     start1 = time()
     coords = {"xvars": use_features, "classes": class_names}
     with pm.Model(coords=coords) as model:
-        xNormal = pm.Data("xNormal", xtrain.copy(), mutable=True)
-        yNormal = pm.ConstantData('yNormal', ytrain.copy())
+        xNormal = pm.Data("xNormal", xtrain.copy())
+        yNormal = pm.Data('yNormal', ytrain.copy())
 
-        betaI = pm.Normal('betaI', mu=0, sigma=10, dims='classes')
+        class_sigma = pm.HalfNormal('class_sigma', sigma=1, dims='classes')
+
+        betaI = pm.Normal('betaI', mu=0, sigma=class_sigma, dims='classes')
         betaP = pm.Normal('betaP', mu=0, sigma=1, dims=('xvars', 'classes'))
 
         betaIR = pm.Deterministic('betaIR', pt.concatenate([[0], betaI]))
@@ -60,10 +61,9 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, 
     row_max = theta_train_pred.argmax(axis=1)
 
     train_acc = accuracy_score(ytrain, row_max)
-    train_prec = precision_score(ytrain, row_max, average='macro')
-    train_rec = recall_score(ytrain, row_max, average='macro')
-    train_f1 = f1_score(ytrain, row_max, average='macro')
-    # train_conf = (str(confusion_matrix(ytrain, row_max).flatten(order='C')))[1:-1]
+    train_prec = precision_score(ytrain, row_max, average='weighted')
+    train_rec = recall_score(ytrain, row_max, average='weighted')
+    train_f1 = f1_score(ytrain, row_max, average='weighted')
 
     end1 = time()
     train_time = end1 - start1
@@ -83,10 +83,9 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, 
     row_max_test = theta_test_pred.argmax(axis=1)
 
     test_acc = accuracy_score(ytest, row_max_test)
-    test_prec = precision_score(ytest, row_max_test, average='macro')
-    test_rec = recall_score(ytest, row_max_test, average='macro')
-    test_f1 = f1_score(ytest, row_max_test, average='macro')
-    # test_conf = (str(confusion_matrix(ytest, row_max_test).flatten(order='C')))[1:-1]
+    test_prec = precision_score(ytest, row_max_test, average='weighted')
+    test_rec = recall_score(ytest, row_max_test, average='weighted')
+    test_f1 = f1_score(ytest, row_max_test, average='weighted')
 
     end2 = time()
     test_time = end2 - start2

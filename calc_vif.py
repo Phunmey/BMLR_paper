@@ -1,6 +1,6 @@
 """
-In the case of multicollinearity, this function computes VIF and iteratively drop columns wiht high VIF base on the
-threshold set. 5 and 10 are acceptable based on the literature.
+In the case of multi-collinearity, this function computes VIF and iteratively drop columns with high VIF based on the
+threshold set. 5 or 10 is acceptable based on the literature.
 """
 
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -21,7 +21,7 @@ def vif_func(X):
 
 
 # Iterative process to remove features with high VIF
-def iterative_vif_selection(X, threshold=5.0):
+def iterative_vif_selection(X, threshold):
     vif = vif_func(X)
     print(f"Initial VIF:\n{vif}\n")
 

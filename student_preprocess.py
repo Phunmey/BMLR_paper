@@ -1,53 +1,30 @@
+import os
 import pandas as pd
-from sklearn.feature_selection import SelectKBest, f_classif
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from subset_numeric_data import preprocess_student
+from calc_vif import iterative_vif_selection
 
 sns.set_palette(palette="deep")
 sns_c = sns.color_palette(palette="deep")
 
 
-def preprocess_student():
-    datapath = r"\data"
-    read_data = pd.read_csv(f"{datapath}/students_dropout.csv")
-    read_data.rename(columns={'day_even_attendance': 'Attendance', 'Educational special needs': 'Special_needs',
-                              'Tuition fees up to date': 'Tuition', 'Scholarship holder': 'Scholarship',
-                              'Age at enrollment': 'Age',
-                              'Curricular units 1st sem (credited)': 'CU1_credited',
-                              'Curricular units 1st sem (enrolled)': 'CU1_enrolled',
-                              'Curricular units 1st sem (evaluations)': 'CU1_eval',
-                              'Curricular units 1st sem (approved)': 'CU1_approved',
-                              'Curricular units 1st sem (without evaluations)': 'CU1_weval',
-                              'Curricular units 1st sem (grade)': 'CU1_grade',
-                              'Curricular units 2nd sem (credited)': 'CU2_credited',
-                              'Curricular units 2nd sem (enrolled)': 'CU2_enrolled',
-                              'Curricular units 2nd sem (evaluations)': 'CU2_eval',
-                              'Curricular units 2nd sem (approved)': 'CU2_approved',
-                              'Curricular units 2nd sem (without evaluations)': 'CU2_weval',
-                              'Curricular units 2nd sem (grade)': 'CU2_grade',
-                              'Previous qualification (grade)': 'Previous_grade', 'Admission grade': 'Admission_grade',
-                              'Unemployment rate': 'Unemployment_rate', 'Inflation rate': 'Inflation_rate',
-                              'Target': 'Status'},
-                     inplace=True)
+def read_data():
+    filepath = "data.csv"
 
-    read_data['CU_enrolled'] = read_data['CU1_enrolled'] + read_data['CU2_enrolled']
-    read_data['CU_grade'] = read_data['CU1_grade'] + read_data['CU2_grade']
-    read_data['CU_approved'] = read_data['CU1_approved'] + read_data['CU2_approved']
-    read_data['CU_weval'] = read_data['CU1_weval'] + read_data['CU2_weval']
-    read_data['CU_eval'] = read_data['CU1_eval'] + read_data['CU2_eval']
-    read_data['CU_credited'] = read_data['CU1_credited'] + read_data['CU2_credited']
+    if not os.path.isfile(filepath):
+        preprocess_student()
 
-    df_num = read_data.drop(columns=['CU1_enrolled', 'CU1_credited', 'CU1_grade', 'CU1_approved', 'CU1_weval',
-                                     'CU1_eval', 'CU2_enrolled', 'CU2_credited', 'CU2_grade', 'CU2_approved',
-                                     'CU2_weval', 'CU2_eval'])
-    # select numerical variables
-    df_x = df_num[['Age', 'CU_enrolled', 'CU_credited', 'CU_grade', 'CU_approved', 'CU_weval', 'CU_eval',
-                   'Unemployment_rate', 'Inflation_rate', 'GDP', 'Previous_grade', 'Admission_grade']]
+    readData = pd.read_csv(filepath)
 
-    codes, uniques = pd.factorize(read_data['Status'], sort=True)
-    df_y = pd.Categorical(read_data['Status']).codes
-
-    class_names = uniques[1:]
+    df_x = readData.iloc[:, :-1]
+    encode_y = pd.Categorical(readData['Status'])
+    df_y = encode_y.codes.astype('int')
+    categ = encode_y.categories.astype('object')
+    classes = ['Enrolled', 'Graduate']
+    get_ind = [categ.get_loc(cls) for cls in classes]
+    class_names = categ.take(get_ind)
 
     return df_x, df_y, class_names
 
@@ -56,11 +33,12 @@ def exploratory_analysis(df_x, df_y):
     """
     This function performs exploratory analysis on the data.
     """
+    # heatmap for numerical variables
     plt.subplots(figsize=(10, 8))
     sns.heatmap(df_x.corr(), annot=True, fmt='.2f')
     plt.title("Correlation matrix between all numerical variables", y=1, size=16)
     plt.xticks(rotation=45, horizontalalignment='right', fontweight='light', fontsize=14)
-    plt.savefig("numvar_heatmap.pdf")
+    plt.savefig("numvar_heatmap_novif.pdf")
 
     sns.pairplot(
         data=pd.concat([df_x, pd.DataFrame(df_y, columns=['Status'])], axis=1),
@@ -72,6 +50,34 @@ def exploratory_analysis(df_x, df_y):
     )
     plt.title("Pairwise relationship between all numerical variables", y=1, size=16)
     plt.xticks(rotation=45, horizontalalignment='right', fontweight='light', fontsize=14)
-    plt.savefig("numvar_pairplot.pdf")
+    plt.savefig("numvar_pairplot_novif.pdf")
 
-    return
+
+def obtain_vif_data(df_x):
+    x_vif = iterative_vif_selection(df_x, threshold=10)
+    return x_vif
+
+
+def vif_exploratory_analysis(x_vif, df_y):
+    """
+    This function performs exploratory analysis on the data.
+    """
+    # heatmap for numerical variables
+    plt.subplots(figsize=(10, 8))
+    sns.heatmap(x_vif.corr(), annot=True, fmt='.2f')
+    plt.title("Correlation matrix between all numerical variables", y=1, size=16)
+    plt.xticks(rotation=45, horizontalalignment='right', fontweight='light', fontsize=14)
+    plt.savefig("numvar_heatmap_vif.pdf")
+
+    sns.pairplot(
+        data=pd.concat([x_vif, pd.DataFrame(df_y, columns=['Status'])], axis=1),
+        hue='Status',
+        kind="scatter",
+        height=2,
+        plot_kws={"color": sns_c[1]},
+        diag_kws={"color": sns_c[2]}
+    )
+    plt.title("Pairwise relationship between all numerical variables", y=1, size=16)
+    plt.xticks(rotation=45, horizontalalignment='right', fontweight='light', fontsize=14)
+    plt.savefig("numvar_pairplot_vif.pdf")
+

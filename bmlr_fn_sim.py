@@ -8,7 +8,7 @@ import pytensor.tensor as pt
 from matplotlib import pyplot as plt
 
 from time import time
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from bayesian_plotting import *
 
 RANDOM_SEED = 8927
@@ -19,23 +19,24 @@ plt.rcParams["figure.figsize"] = [7, 6]
 plt.rcParams["figure.dpi"] = 100
 
 
-def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, resampling_technique, classes,
-         sample, sce, i):
+def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, classes, sample, sce, i):
     start1 = time()
     coords = {"xvars": use_features, "classes": class_names}
     with pm.Model(coords=coords) as model:
-        xNormal = pm.Data("xNormal", xtrain.copy(), mutable=True)
-        yNormal = pm.ConstantData('yNormal', ytrain.copy())
+        xNormal = pm.Data("xNormal", xtrain.copy())
+        yNormal = pm.Data('yNormal', ytrain.copy())
 
-        betaI = pm.Normal('betaI', mu=0, sigma=10, dims='classes')
-        betaP = pm.Normal('betaP', mu=0, sigma=1, dims=('xvars', 'classes'))
+        class_sigma = pm.HalfNormal('class_sigma', sigma=10, dims='classes')
+
+        betaI = pm.Normal('betaI', mu=0, sigma=class_sigma, dims='classes')
+        betaP = pm.Normal('betaP', mu=0, sigma=10, dims=('xvars', 'classes'))
 
         betaIR = pm.Deterministic('betaIR', pt.concatenate([[0], betaI]))
         betaPR = pm.Deterministic('betaPR', pt.concatenate([pt.zeros((xNormal.shape[1], 1)), betaP],
                                                            axis=1))
 
         muNormal = betaIR + pm.math.dot(xNormal, betaPR)
-        thetaNormal = pm.Deterministic(f"thetaNormal_{resampling_technique}", pt.special.softmax(muNormal,
+        thetaNormal = pm.Deterministic(f"thetaNormal", pt.special.softmax(muNormal,
                                                                                                  axis=1))
 
         pm.Categorical('observed', p=thetaNormal, observed=yNormal, shape=thetaNormal.shape[0])
@@ -44,21 +45,20 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, 
         trace.extend(pm.sample_posterior_predictive(trace, random_seed=rng))
 
     summary = az.summary(trace, var_names=['betaI', 'betaP'], hdi_prob=0.95, round_to=3)
-    summary.to_csv(f"./summary/{classes}_{sample}_{sce}_{resampling_technique}_summary_{i}.csv")
+    summary.to_csv(f"./summary/{classes}_{sample}_{sce}_summary_{i}.csv")
 
-    theta_train_pred = trace.posterior[f'thetaNormal_{resampling_technique}'].mean(dim=['chain', 'draw'])
+    theta_train_pred = trace.posterior[f'thetaNormal'].mean(dim=['chain', 'draw'])
     row_max = theta_train_pred.argmax(axis=1)
 
     train_acc = accuracy_score(ytrain, row_max)
-    train_prec = precision_score(ytrain, row_max, average='macro')
-    train_rec = recall_score(ytrain, row_max, average='macro')
-    train_f1 = f1_score(ytrain, row_max, average='macro')
-    # train_conf = (str(confusion_matrix(ytrain, row_max).flatten(order='C')))[1:-1]
+    train_prec = precision_score(ytrain, row_max, average='weighted')
+    train_rec = recall_score(ytrain, row_max, average='weighted')
+    train_f1 = f1_score(ytrain, row_max, average='weighted')
 
     end1 = time()
     train_time = end1 - start1
 
-    file1.write(f"{classes}\t{sample}\t{sce}\t{resampling_technique}\tBMLR\t{i}\t{train_acc}\t{train_prec}\t"
+    file1.write(f"{classes}\t{sample}\t{sce}\tBMLR\t{i}\t{train_acc}\t{train_prec}\t"
                 f"{train_rec}\t{train_f1}\t{train_time}\n")
     file1.flush()
 
@@ -66,21 +66,20 @@ def bmlr(file1, file2, use_features, xtrain, ytrain, xtest, ytest, class_names, 
     with model:
         pm.set_data({"xNormal": xtest.copy()})
         post_predictive = pm.sample_posterior_predictive(trace,
-                                                         var_names=[f'thetaNormal_{resampling_technique}', 'observed'],
+                                                         var_names=['thetaNormal', 'observed'],
                                                          predictions=True)
 
-    theta_test_pred = post_predictive.predictions[f'thetaNormal_{resampling_technique}'].mean(dim=['chain', 'draw'])
+    theta_test_pred = post_predictive.predictions['thetaNormal'].mean(dim=['chain', 'draw'])
     row_max_test = theta_test_pred.argmax(axis=1)
 
     test_acc = accuracy_score(ytest, row_max_test)
-    test_prec = precision_score(ytest, row_max_test, average='macro')
-    test_rec = recall_score(ytest, row_max_test, average='macro')
-    test_f1 = f1_score(ytest, row_max_test, average='macro')
-    # test_conf = (str(confusion_matrix(ytest, row_max_test).flatten(order='C')))[1:-1]
+    test_prec = precision_score(ytest, row_max_test, average='weighted')
+    test_rec = recall_score(ytest, row_max_test, average='weighted')
+    test_f1 = f1_score(ytest, row_max_test, average='weighted')
 
     end2 = time()
     test_time = end2 - start2
 
-    file2.write(f"{classes}\t{sample}\t{sce}\t{resampling_technique}\tBMLR\t{i}\t{test_acc}\t{test_prec}\t"
+    file2.write(f"{classes}\t{sample}\t{sce}\tBMLR\t{i}\t{test_acc}\t{test_prec}\t"
                 f"{test_rec}\t{test_f1}\t{test_time}\n")
     file2.flush()
