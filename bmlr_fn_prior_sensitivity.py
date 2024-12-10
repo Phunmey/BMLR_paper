@@ -1,5 +1,6 @@
 import pymc as pm
 import pytensor.tensor as pt
+import matplotlib.pyplot as plt
 
 from time import time
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, balanced_accuracy_score

@@ -34,8 +34,8 @@ def main(file1, file2):
 
 
 if __name__ == "__main__":
-    train_f = "./prior_sensitivity_results/sim_train_results.csv"
-    test_f = "./prior_sensitivity_results/sim_test_results.csv"
+    train_f = "sim_train_prior_sensitivity_results.csv"
+    test_f = "sim_test_prior_sensitivity_results.csv"
 
     file1, file2 = initialize_files(train_f, test_f)
 

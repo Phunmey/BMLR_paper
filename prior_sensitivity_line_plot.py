@@ -55,15 +55,13 @@ def plot_f1_scores(df):
 
     plt.tight_layout(rect=(0.03, 0.07, 0.9, 0.95))
 
-    #plt.show()
-
-    plt.savefig(r".\prior_sensitivity_results\prior_sensitivity_plot.pdf", bbox_inches='tight')
+    plt.savefig("prior_sensitivity_plot.pdf", bbox_inches='tight')
 
     plt.clf()
 
 
 if __name__ == '__main__':
-    file_path = r".\prior_sensitivity_results\sim_test_results.csv"
+    file_path = "sim_test_prior_sensitivity_results.csv"
     df1 = pd.read_csv(file_path, sep='\t', header=0)
     df1 = df1.drop(['data_type', 'model', 'iteration', 'time_taken'], axis=1)
     sigma_mapping = {0.01: '0.01', 0.50: '0.5', 1.00: '1', 5.00: '5', 10.00: '10', 100.00: '100', 1000.00: '1000', }
