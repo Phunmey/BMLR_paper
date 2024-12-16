@@ -3,7 +3,7 @@ import numpy as np
 
 
 def traceplotting(X):
-    axes = az.plot_trace(X, var_names=['betaI', 'betaP'], show=False)
+    axes = az.plot_trace(X, var_names=['betaI', 'betaP'], divergences=None, show=False)
     axes[1, 0].set_xlabel("Sample Values")
     axes[1, 1].set_xlabel("Number of Samples")
     axes[0, 0].set_ylabel("Density")
@@ -23,7 +23,6 @@ def posterior_predictiveplotting(X):
     ax.set_xlabel("Status", fontsize=16)
     ax.set_xticks([0.5, 1.5, 2.5])
     ax.set_xticklabels(["Dropout", "Enrolled", "Graduate"], fontsize=12)
-    # Increase the size of the legend
-    ax.legend(fontsize=12)
+    ax.legend(fontsize=12)  # Increase the size of the legend
 
     return
